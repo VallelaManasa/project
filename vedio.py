@@ -134,7 +134,7 @@ def ensure_dependencies():
     
     try:
         import torch
-        torch_installed = torch.__version__
+        torch_installed = True
     except ImportError:
         torch_installed = False
 
@@ -143,10 +143,13 @@ def ensure_dependencies():
             subprocess.check_call([sys.executable, "-m", "pip", "install", "torch"])  # Install PyTorch as a default option
         except Exception as e:
             st.error(f"Error installing PyTorch: {str(e)}")
+            return False
+    
+    return True
 
 # Ensure the necessary NLTK data package and dependencies are installed
 download_nltk_data()
-ensure_dependencies()
+dependencies_installed = ensure_dependencies()
 
 # Initialize the text-to-speech engine
 engine = pyttsx3.init()
@@ -194,8 +197,8 @@ def load_summarizer():
         st.error(f"Error loading summarizer model: {str(e)}")
         return None
 
-# Load the summarizer model
-summarizer = load_summarizer()
+# Load the summarizer model if dependencies are installed
+summarizer = load_summarizer() if dependencies_installed else None
 
 def summarize_text(text, max_chunk=1000):
     summarized_text = []
@@ -321,6 +324,7 @@ if url_or_text:
                         st.image(article['top_image'], width=150, use_column_width=True)
         except Exception as e:
             st.error(f'Sorry, something went wrong: {e}')
+
 
 
 
