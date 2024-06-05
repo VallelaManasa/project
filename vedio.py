@@ -104,17 +104,26 @@ from transformers import pipeline
 import nltk
 import requests
 import json
-import os
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 # Download NLTK data
 nltk.download('punkt')
 
 # Load the summarization pipeline
-summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
+try:
+    summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
+except Exception as e:
+    st.error(f"Error loading summarizer model: {str(e)}")
+    logging.error(f"Error loading summarizer model: {str(e)}")
+    summarizer = None
 
 st.title('Article and Video Summarizer')
 
 url = st.text_input('URL Input', placeholder='Paste the URL of the article or YouTube video and press Enter', label_visibility='collapsed')
+logging.info(f"URL Input: {url}")
 
 def summarize_text(text, max_chunk=1000):
     summarized_text = []
@@ -146,8 +155,10 @@ def get_transcript(video_id, language='en'):
 def get_youtube_video_details(video_id, api_key):
     url = f"https://www.googleapis.com/youtube/v3/videos?part=snippet&id={video_id}&key={api_key}"
     response = requests.get(url)
+    logging.info(f"API Response Status Code: {response.status_code}")
     if response.status_code == 200:
         data = response.json()
+        logging.info(f"API Response Data: {data}")
         if "items" in data and len(data["items"]) > 0:
             snippet = data["items"][0]["snippet"]
             title = snippet["title"]
@@ -155,75 +166,47 @@ def get_youtube_video_details(video_id, api_key):
             return title, thumbnail_url
     return None, None
 
-def extract_video_id(url):
-    if 'youtube.com/watch' in url:
-        video_id = url.split('v=')[-1].split('&')[0]
-    elif 'youtu.be/' in url:
-        video_id = url.split('/')[-1].split('?')[0]
-    else:
-        video_id = None
-    return video_id
-
-if url:
-    if 'youtube.com/watch' in url or 'youtu.be/' in url:
-        try:
-            video_id = extract_video_id(url)
-
-            if not video_id:
-                st.error("Invalid YouTube URL.")
+if url and summarizer:
+    try:
+        if 'youtube.com/watch' in url or 'youtu.be/' in url:
+            if 'youtube.com/watch' in url:
+                video_id = url.split('v=')[-1]
+            elif 'youtu.be/' in url:
+                video_id = url.split('/')[-1]
+            
+            logging.info(f"Extracted Video ID: {video_id}")
+            
+            # Provide your YouTube Data API key here
+            api_key = "AIzaSyBpeSG0qej8ZFJ0uZ267nfHBW0fv_RQLEo"
+            video_title, thumbnail_url = get_youtube_video_details(video_id, api_key)
+            
+            if video_title and thumbnail_url:
+                st.image(thumbnail_url)
+                st.subheader(video_title)
+            
+            transcript = get_transcript(video_id)
+            logging.info(f"Transcript: {transcript[:500]}")  # log the first 500 characters for brevity
+            if not transcript:
+                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+                available_languages = transcript_list._manually_created_transcripts or transcript_list._generated_transcripts
+                available_languages = [t.language_code for t in available_languages]
+                st.write(f"Available languages: {', '.join(available_languages)}")
+                language = st.selectbox("Select a language", available_languages)
+                transcript = get_transcript(video_id, language)
+            
+            if transcript:
+                tab1, tab2 = st.tabs(["Full Text", "Summary"])
+                with tab1:
+                    st.subheader('Full Text:')
+                    st.write(transcript)
+                
+                with tab2:
+                    summarized_text = summarize_text(transcript)
+                    st.subheader('Summary:')
+                    st.write(summarized_text)
             else:
-                st.write(f"Extracted Video ID: {video_id}")
+                st.error("Could not retrieve a transcript for the video.")
+    except Exception as e:
+        st.error(f"Sorry, something went wrong: {str(e)}")
+        logging.error(f"Error: {str(e)}")
 
-                # Load YouTube Data API key from environment variable
-                api_key = os.getenv('AIzaSyBpeSG0qej8ZFJ0uZ267nfHBW0fv_RQLEo')
-                if not api_key:
-                    st.error("YouTube API key not set. Please set the YOUTUBE_API_KEY environment variable.")
-                else:
-                    video_title, thumbnail_url = get_youtube_video_details(video_id, api_key)
-
-                    if video_title and thumbnail_url:
-                        st.image(thumbnail_url)
-                        st.subheader(video_title)
-
-                    transcript = get_transcript(video_id)
-                    if not transcript:
-                        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-                        available_languages = transcript_list._manually_created_transcripts or transcript_list._generated_transcripts
-                        available_languages = [t.language_code for t in available_languages]
-                        st.write(f"Available languages: {', '.join(available_languages)}")
-                        language = st.selectbox("Select a language", available_languages)
-                        transcript = get_transcript(video_id, language)
-
-                    if transcript:
-                        tab1, tab2 = st.tabs(["Full Text", "Summary"])
-                        with tab1:
-                            st.subheader('Full Text:')
-                            st.write(transcript)
-
-                        with tab2:
-                            summarized_text = summarize_text(transcript)
-                            st.subheader('Summary:')
-                            st.write(summarized_text)
-                    else:
-                        st.error("Could not retrieve a transcript for the video.")
-        except Exception as e:
-            st.error(f"Sorry, something went wrong: {str(e)}")
-    else:
-        try:
-            article = Article(url)
-            article.download()
-            article.parse()
-            article.nlp()
-            text = article.text
-
-            tab1, tab2 = st.tabs(["Full Text", "Summary"])
-            with tab1:
-                st.subheader('Full Text:')
-                st.write(text)
-
-            with tab2:
-                summarized_text = summarize_text(text)
-                st.subheader('Summary:')
-                st.write(summarized_text)
-        except Exception as e:
-            st.error(f"Sorry, something went wrong: {str(e)}")
