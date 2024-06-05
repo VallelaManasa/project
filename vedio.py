@@ -110,6 +110,7 @@ from bs4 import BeautifulSoup
 import nltk
 from transformers import pipeline
 import requests
+import runpy
 
 def download_nltk_data():
     nltk_data_dir = os.path.join(os.path.expanduser('~'), 'nltk_data')
@@ -250,7 +251,7 @@ def get_youtube_video_details(video_id, api_key):
             return title, thumbnail_url
     return None, None
 
-url_or_text = st.text_input('', placeholder='Paste the URL of the article or enter a query and press Enter')
+url_or_text = st.text_input('Enter URL or query:', placeholder='Paste the URL of the article or enter a query and press Enter')
 
 if url_or_text:
     if is_url(url_or_text):
@@ -335,5 +336,6 @@ if url_or_text:
                 st.image(article['top_image'], width=150)
 else:
     st.write("Enter a URL or query to get started.")
+
 
 
