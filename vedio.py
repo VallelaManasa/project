@@ -111,49 +111,68 @@ import nltk
 from transformers import pipeline
 import requests
 
-# Function to ensure necessary NLTK data is downloaded
 def download_nltk_data():
     nltk_data_dir = os.path.join(os.path.expanduser('~'), 'nltk_data')
     if not os.path.exists(nltk_data_dir):
         os.makedirs(nltk_data_dir)
     nltk.data.path.append(nltk_data_dir)
     
-    # Check if 'punkt' is already downloaded
     try:
         nltk.data.find('tokenizers/punkt')
     except LookupError:
         nltk.download('punkt', quiet=True, download_dir=nltk_data_dir)
 
-# Function to ensure TensorFlow or PyTorch is installed
 def ensure_dependencies():
+    tf_installed = False
+    torch_installed = False
+    
     try:
         import tensorflow as tf
+        st.write(f"TensorFlow version: {tf.__version__}")
         tf_installed = True
     except ImportError:
-        tf_installed = False
+        st.info("TensorFlow not installed.")
     
     try:
         import torch
+        st.write(f"PyTorch version: {torch.__version__}")
         torch_installed = True
     except ImportError:
-        torch_installed = False
+        st.info("PyTorch not installed.")
 
     if not tf_installed and not torch_installed:
         try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "torch"])  # Install PyTorch as a default option
+            # Try installing PyTorch as a fallback
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "torch==2.0.0+cpu", "-f", "https://download.pytorch.org/whl/torch_stable.html"])
+            import torch
+            st.write(f"PyTorch version after installation: {torch.__version__}")
+            torch_installed = True
+        except subprocess.CalledProcessError as e:
+            st.error(f"Error installing PyTorch: {e}")
+            return False
         except Exception as e:
-            st.error(f"Error installing PyTorch: {str(e)}")
+            st.error(f"An unexpected error occurred: {str(e)}")
             return False
     
-    return True
+    return tf_installed or torch_installed
 
-# Ensure the necessary NLTK data package and dependencies are installed
-download_nltk_data()
 dependencies_installed = ensure_dependencies()
 
-# Initialize the text-to-speech engine
-engine = pyttsx3.init()
+# Initialize summarizer if dependencies are installed
+if dependencies_installed:
+    try:
+        from transformers import pipeline
+        summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
+        st.write("Summarizer model loaded successfully.")
+    except Exception as e:
+        st.error(f"Error loading summarizer model: {str(e)}")
+        summarizer = None
+else:
+    summarizer = None
 
+download_nltk_data()
+
+engine = pyttsx3.init()
 st.title('Summarizer and Recommender')
 
 def is_url(input_text):
@@ -164,16 +183,10 @@ async def fetch_article_metadata(session, url):
         async with session.get(url) as response:
             text = await response.text()
             soup = BeautifulSoup(text, 'html.parser')
-            
             title = soup.find('title').get_text() if soup.find('title') else 'No title'
             og_image = soup.find('meta', property='og:image')
             image_url = og_image['content'] if og_image else None
-            
-            return {
-                'title': title,
-                'top_image': image_url,
-                'url': url
-            }
+            return {'title': title, 'top_image': image_url, 'url': url}
     except Exception as e:
         return None
 
@@ -188,7 +201,6 @@ async def fetch_recommended_articles(query):
         st.error(f'Sorry, something went wrong: {e}')
         return []
 
-# Function to load the summarizer model
 def load_summarizer():
     try:
         summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
@@ -197,8 +209,10 @@ def load_summarizer():
         st.error(f"Error loading summarizer model: {str(e)}")
         return None
 
-# Load the summarizer model if dependencies are installed
-summarizer = load_summarizer() if dependencies_installed else None
+if dependencies_installed:
+    summarizer = load_summarizer()
+else:
+    summarizer = None
 
 def summarize_text(text, max_chunk=1000):
     summarized_text = []
