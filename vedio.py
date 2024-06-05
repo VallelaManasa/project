@@ -152,7 +152,7 @@ def ensure_dependencies():
 
     if not torch_installed:
         try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "torch==2.0.0"])
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "torch==2.3.0+cu121"])
             import torch
             st.write(f"PyTorch version after installation: {torch.__version__}")
             torch_installed = True
@@ -335,6 +335,7 @@ if url_or_text:
                 st.image(article['top_image'], width=150)
 else:
     st.write("Enter a URL or query to get started.")
+
 
 
 
