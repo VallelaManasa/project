@@ -405,7 +405,7 @@ if choice == "Home":
                     st.write("Image format not supported or URL not provided")
 
 elif choice == "Video Summarizer":
-    runpy.run_path("video.py")
+    runpy.run_path("vedio.py")
 
 elif choice == "Article Summarizer":
     runpy.run_path("article.py")
