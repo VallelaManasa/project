@@ -142,8 +142,22 @@ def ensure_dependencies():
 
     if not tf_installed and not torch_installed:
         try:
+            # Try installing TensorFlow as a fallback
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "tensorflow==2.12.0"])
+            import tensorflow as tf
+            st.write(f"TensorFlow version after installation: {tf.__version__}")
+            tf_installed = True
+        except subprocess.CalledProcessError as e:
+            st.error(f"Error installing TensorFlow: {e}")
+            return False
+        except Exception as e:
+            st.error(f"An unexpected error occurred: {str(e)}")
+            return False
+
+    if not torch_installed:
+        try:
             # Try installing PyTorch as a fallback
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "torch==2.0.0+cpu", "-f", "https://download.pytorch.org/whl/torch_stable.html"])
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "torch==2.0.0"])
             import torch
             st.write(f"PyTorch version after installation: {torch.__version__}")
             torch_installed = True
@@ -161,7 +175,6 @@ dependencies_installed = ensure_dependencies()
 # Initialize summarizer if dependencies are installed
 if dependencies_installed:
     try:
-        from transformers import pipeline
         summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
         st.write("Summarizer model loaded successfully.")
     except Exception as e:
@@ -320,25 +333,25 @@ if url_or_text:
                         engine.say(summary)
                         engine.runAndWait()
 
+                    recommendations = asyncio.run(fetch_recommended_articles(title))
+
+                    st.subheader('Recommended Articles')
+                    for article in recommendations:
+                        st.markdown(f"[{article['title']}]({article['url']})")
+                        if article['top_image']:
+                            st.image(article['top_image'], width=150)
                 except Exception as e:
-                    st.error(f'Sorry, something went wrong: {e}')
-        else:
-            st.error("Summarizer model is not loaded.")
+                    st.error(f"An error occurred while processing the article: {str(e)}")
     else:
+        recommendations = asyncio.run(fetch_recommended_articles(url_or_text))
+
         st.subheader('Recommended Articles')
-        try:
-            articles = asyncio.run(fetch_recommended_articles(url_or_text))
-            for article in articles:
-                col1, col2 = st.columns([2, 1])
-
-                with col1:
-                    st.markdown(f"[{article['title']}]({article['url']})")
-                with col2:
-                    if article['top_image']:
-                        st.image(article['top_image'], width=150, use_column_width=True)
-        except Exception as e:
-            st.error(f'Sorry, something went wrong: {e}')
-
+        for article in recommendations:
+            st.markdown(f"[{article['title']}]({article['url']})")
+            if article['top_image']:
+                st.image(article['top_image'], width=150)
+else:
+    st.write("Enter a URL or query to get started.")
 
 
 
