@@ -11,4 +11,5 @@ youtube_transcript_api==0.6.2
 googlesearch-python
 lxml==4.9.3
 torch 
+transformers
 
