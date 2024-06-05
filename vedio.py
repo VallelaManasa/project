@@ -206,9 +206,21 @@ if url and summarizer:
                     st.write(summarized_text)
             else:
                 st.error("Could not retrieve a transcript for the video.")
+        else:
+            # Handle text article
+            article = Article(url)
+            article.download()
+            article.parse()
+            st.write(article.title)
+            st.write(article.text)
+            
+            st.subheader('Text Summary:')
+            summary = summarize_text(article.text)
+            st.write(summary)
     except Exception as e:
         st.error(f"Sorry, something went wrong: {str(e)}")
         logging.error(f"Error: {str(e)}")
+
 
 
 
