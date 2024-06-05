@@ -97,6 +97,7 @@
 #         except Exception as e:
 #             st.error(f"Sorry, something went wrong: {str(e)}")
 
+import os
 import streamlit as st
 from newspaper import Article
 from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound, TranscriptsDisabled, VideoUnavailable
@@ -110,7 +111,13 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 # Download NLTK data
-nltk.download('punkt')
+nltk_data_dir = os.path.join(os.path.expanduser('~'), 'nltk_data')
+if not os.path.exists(nltk_data_dir):
+    os.makedirs(nltk_data_dir)
+nltk.data.path.append(nltk_data_dir)
+
+if not nltk.data.find('tokenizers/punkt'):
+    nltk.download('punkt')
 
 # Load the summarization pipeline
 try:
@@ -207,19 +214,43 @@ if url and summarizer:
             else:
                 st.error("Could not retrieve a transcript for the video.")
         else:
-            # Handle text article
-            article = Article(url)
+            article = newspaper.Article(url)
             article.download()
             article.parse()
-            st.write(article.title)
-            st.write(article.text)
-            
-            st.subheader('Text Summary:')
-            summary = summarize_text(article.text)
-            st.write(summary)
+
+            img = article.top_image
+            st.image(img)
+
+            title = article.title
+            st.subheader(title)
+
+            authors = article.authors
+            st.text(','.join(authors))
+
+            article.nlp()
+
+            keywords = article.keywords
+            st.subheader('Keywords:')
+            st.write(', '.join(keywords))
+
+            tab1, tab2 = st.tabs(["Full Text", "Summary"])
+            with tab1:
+                st.subheader('Full Text')
+                txt = article.text.replace('Advertisement', '')
+                st.write(txt)
+            with tab2:
+                st.subheader('Summary')
+                summary = article.summary.replace('Advertisement', '')
+                st.write(summary)
+
+            if st.button("Read Summary"):
+                engine.say(summary)
+                engine.runAndWait()
+
     except Exception as e:
         st.error(f"Sorry, something went wrong: {str(e)}")
         logging.error(f"Error: {str(e)}")
+
 
 
 
