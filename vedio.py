@@ -106,9 +106,9 @@ import newspaper
 import pyttsx3
 from bs4 import BeautifulSoup
 import subprocess
+import sys
 import nltk
 from transformers import pipeline
-import torch
 import requests
 
 # Function to ensure necessary NLTK data is downloaded
@@ -138,12 +138,16 @@ def ensure_dependencies():
         torch_installed = False
 
     if not tf_installed and not torch_installed:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "torch"])  # Install PyTorch as a default option
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "torch"])  # Install PyTorch as a default option
+        except Exception as e:
+            st.error(f"Error installing PyTorch: {str(e)}")
 
 # Ensure the necessary NLTK data package and dependencies are installed
 download_nltk_data()
 ensure_dependencies()
 
+# Initialize the text-to-speech engine
 engine = pyttsx3.init()
 
 st.title('Summarizer and Recommender')
@@ -180,6 +184,7 @@ async def fetch_recommended_articles(query):
         st.error(f'Sorry, something went wrong: {e}')
         return []
 
+# Function to load the summarizer model
 def load_summarizer():
     try:
         summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
@@ -188,6 +193,7 @@ def load_summarizer():
         st.error(f"Error loading summarizer model: {str(e)}")
         return None
 
+# Load the summarizer model
 summarizer = load_summarizer()
 
 def summarize_text(text, max_chunk=1000):
@@ -314,4 +320,5 @@ if url_or_text:
                         st.image(article['top_image'], width=150, use_column_width=True)
         except Exception as e:
             st.error(f'Sorry, something went wrong: {e}')
+
 
