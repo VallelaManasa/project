@@ -140,32 +140,24 @@ def ensure_dependencies():
     except ImportError:
         st.info("PyTorch not installed.")
 
-    if not tf_installed and not torch_installed:
+    if not tf_installed:
         try:
-            # Try installing TensorFlow as a fallback
             subprocess.check_call([sys.executable, "-m", "pip", "install", "tensorflow==2.12.0"])
             import tensorflow as tf
             st.write(f"TensorFlow version after installation: {tf.__version__}")
             tf_installed = True
-        except subprocess.CalledProcessError as e:
-            st.error(f"Error installing TensorFlow: {e}")
-            return False
         except Exception as e:
-            st.error(f"An unexpected error occurred: {str(e)}")
+            st.error(f"Error installing TensorFlow: {str(e)}")
             return False
 
     if not torch_installed:
         try:
-            # Try installing PyTorch as a fallback
             subprocess.check_call([sys.executable, "-m", "pip", "install", "torch==2.0.0"])
             import torch
             st.write(f"PyTorch version after installation: {torch.__version__}")
             torch_installed = True
-        except subprocess.CalledProcessError as e:
-            st.error(f"Error installing PyTorch: {e}")
-            return False
         except Exception as e:
-            st.error(f"An unexpected error occurred: {str(e)}")
+            st.error(f"Error installing PyTorch: {str(e)}")
             return False
     
     return tf_installed or torch_installed
@@ -213,19 +205,6 @@ async def fetch_recommended_articles(query):
     except Exception as e:
         st.error(f'Sorry, something went wrong: {e}')
         return []
-
-def load_summarizer():
-    try:
-        summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
-        return summarizer
-    except Exception as e:
-        st.error(f"Error loading summarizer model: {str(e)}")
-        return None
-
-if dependencies_installed:
-    summarizer = load_summarizer()
-else:
-    summarizer = None
 
 def summarize_text(text, max_chunk=1000):
     summarized_text = []
@@ -278,7 +257,7 @@ if url_or_text:
                 elif 'youtu.be/' in url_or_text:
                     video_id = url_or_text.split('/')[-1]
                 
-                api_key = "AIzaSyBpeSG0qej8ZFJ0uZ267nfHBW0fv_RQLEo"
+                api_key = "AIzaSyBpeSG0qej8ZFJ0uZ267nfHBW0fv_RQLEo"  # Replace with your API key
                 video_title, thumbnail_url = get_youtube_video_details(video_id, api_key)
                 
                 if video_title and thumbnail_url:
