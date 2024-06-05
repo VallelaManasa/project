@@ -98,6 +98,8 @@
 #             st.error(f"Sorry, something went wrong: {str(e)}")
 
 import os
+import sys
+import subprocess
 import streamlit as st
 import aiohttp
 import asyncio
@@ -105,8 +107,6 @@ from googlesearch import search
 import newspaper
 import pyttsx3
 from bs4 import BeautifulSoup
-import subprocess
-import sys
 import nltk
 from transformers import pipeline
 import requests
@@ -133,6 +133,7 @@ def ensure_dependencies():
         tf_installed = False
     
     try:
+        import torch
         torch_installed = torch.__version__
     except ImportError:
         torch_installed = False
@@ -320,5 +321,6 @@ if url_or_text:
                         st.image(article['top_image'], width=150, use_column_width=True)
         except Exception as e:
             st.error(f'Sorry, something went wrong: {e}')
+
 
 
