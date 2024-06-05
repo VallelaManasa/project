@@ -210,3 +210,4 @@ if url and summarizer:
         st.error(f"Sorry, something went wrong: {str(e)}")
         logging.error(f"Error: {str(e)}")
 
+
