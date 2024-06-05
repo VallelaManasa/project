@@ -111,13 +111,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 # Download NLTK data
-nltk_data_dir = os.path.join(os.path.expanduser('~'), 'nltk_data')
-if not os.path.exists(nltk_data_dir):
-    os.makedirs(nltk_data_dir)
-nltk.data.path.append(nltk_data_dir)
-
-if not nltk.data.find('tokenizers/punkt'):
-    nltk.download('punkt')
+nltk.download('punkt')
 
 # Load the summarization pipeline
 try:
@@ -213,19 +207,14 @@ if url and summarizer:
                     st.write(summarized_text)
             else:
                 st.error("Could not retrieve a transcript for the video.")
+        
         else:
-            article = newspaper.Article(url)
+            article = Article(url)
             article.download()
             article.parse()
 
-            img = article.top_image
-            st.image(img)
-
-            title = article.title
-            st.subheader(title)
-
-            authors = article.authors
-            st.text(','.join(authors))
+            st.subheader(article.title)
+            st.text(','.join(article.authors))
 
             article.nlp()
 
@@ -233,23 +222,21 @@ if url and summarizer:
             st.subheader('Keywords:')
             st.write(', '.join(keywords))
 
-            tab1, tab2 = st.tabs(["Full Text", "Summary"])
+            tab1, tab2 = st.columns([1, 1])
             with tab1:
-                st.subheader('Full Text')
-                txt = article.text.replace('Advertisement', '')
-                st.write(txt)
+                st.subheader('Full Text:')
+                st.write(article.text)
             with tab2:
-                st.subheader('Summary')
-                summary = article.summary.replace('Advertisement', '')
+                st.subheader('Summary:')
+                summary = summarize_text(article.text)
                 st.write(summary)
 
             if st.button("Read Summary"):
-                engine.say(summary)
-                engine.runAndWait()
-
+                st.audio(summary, format='text/plain')
     except Exception as e:
         st.error(f"Sorry, something went wrong: {str(e)}")
         logging.error(f"Error: {str(e)}")
+
 
 
 
