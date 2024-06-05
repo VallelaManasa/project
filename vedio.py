@@ -165,15 +165,15 @@ def ensure_dependencies():
 dependencies_installed = ensure_dependencies()
 
 # Initialize summarizer if dependencies are installed
+summarizer = None
 if dependencies_installed:
     try:
         summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
         st.write("Summarizer model loaded successfully.")
     except Exception as e:
         st.error(f"Error loading summarizer model: {str(e)}")
-        summarizer = None
 else:
-    summarizer = None
+    st.error("Failed to install required dependencies (TensorFlow or PyTorch).")
 
 download_nltk_data()
 
@@ -207,6 +207,10 @@ async def fetch_recommended_articles(query):
         return []
 
 def summarize_text(text, max_chunk=1000):
+    if not summarizer:
+        st.error("Summarizer model is not loaded.")
+        return ""
+    
     summarized_text = []
     num_iters = int(len(text) / max_chunk) + 1
     for i in range(num_iters):
@@ -331,6 +335,7 @@ if url_or_text:
                 st.image(article['top_image'], width=150)
 else:
     st.write("Enter a URL or query to get started.")
+
 
 
 
